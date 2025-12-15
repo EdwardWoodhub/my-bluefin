@@ -1,45 +1,91 @@
----
-# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
-# image will be published to ghcr.io/<user>/<name>
-name: template
-# description will be included in the image's metadata
-description: This is my personal OS image.
+# 镜像名称 (构建后你的镜像地址包含这个名字)
+name: my-bluefin-vm
+# 描述
+description: 专为 VMware 定制，集成 v2rayA 网络自治能力的 Bluefin 系统
 
-# the base image to build on top of (FROM) and the version tag to use
-base-image: ghcr.io/ublue-os/silverblue-main
-image-version: 42 # latest is also supported if you want new updates ASAP
+# --- 基础镜像选择 ---
+# 如果你是 GNOME 爱好者 (推荐)，使用 Bluefin
+base-image: ghcr.io/ublue-os/bluefin:latest
+# 如果你是 KDE 爱好者，请注释掉上面那行，取消下面这行的注释
+# base-image: ghcr.io/ublue-os/bazzite:latest
 
-# module configuration, executed in order
-# you can include multiple instances of the same module
+# --- 显卡驱动选择 (默认 Intel/AMD) ---
+# 如果你的物理机是 Nvidia 显卡，且在 VMware 里开启了 3D 加速
+# 建议在这个 recipe 所在的 GitHub 仓库设置里，把 "drivers" 相关的选项打开
+# 或者查阅 BlueBuild 文档启用 Nvidia 基础镜像。
+# 但通常在 VMware 里，使用标准镜像即可，因为走的是虚拟显卡。
+
+image-version: latest
+
+# --- 核心模块配置 ---
 modules:
+  # 1. 添加第三方软件源 (COPR)
+  # 这里添加 v2rayA 的官方 Fedora 源
+  - type: copr
+    name: mzz2017/v2raya
+
+  # 2. 系统软件包安装 (rpm-ostree)
+  # 这里的软件会直接安装进系统层 (/usr)，开机即用
+  - type: rpm-ostree
+    install:
+      # --- 网络代理核心 ---
+      - v2ray-core          # V2Ray 核心
+      - v2raya              # Web 管理面板
+      - trojan              # Trojan 客户端 (如果你需要单独用 CLI)
+      
+      # --- 透明代理依赖 (关键) ---
+      # v2rayA 开启透明代理需要这些工具来管理流量转发
+      - iptables
+      - ipset
+      
+      # --- VMware 增强工具 (关键) ---
+      # 让你在虚拟机里能复制粘贴、拖拽文件、自动调整分辨率
+      - open-vm-tools
+      - open-vm-tools-desktop 
+
+      # --- 日常实用工具 (按需增减) ---
+      - git                 # 版本控制
+      - vim                 # 编辑器
+      - htop                # 进程查看
+      - fastfetch           # 查看系统信息 (类似 neofetch)
+      - wget                # 下载工具
+      - fuse                # 某些 AppImage 需要
+      - code              # 如果你想直接把 VSCode 装在系统层，取消注释
+      # - firefox
+      - flameshot
+
+  # 3. 系统服务管理 (Systemd)
+  # 设置哪些服务开机自启
+  - type: systemd
+    system:
+      enabled:
+        # 开启 v2rayA 服务，保证开机就能通过网页访问 localhost:2017
+        - v2raya.service
+        # 开启 VMware 工具服务
+        - vmtoolsd.service
+        # 开启 Docker (Bluefin 默认自带 Docker，但最好确保它启动)
+        - docker.service
+
+  # 4. 系统参数调整 (可选)
+  # 开启 IP 转发，这对于透明代理有时是必须的
   - type: files
     files:
-      - source: system
-        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
+      - source: system/99-ip-forward.conf
+        destination: /etc/sysctl.d/99-ip-forward.conf
+        data: |
+          net.ipv4.ip_forward = 1
 
-  - type: dnf
-    repos:
-      copr:
-        - atim/starship
-    install:
-      packages:
-        - micro
-        - starship
-    remove:
-      packages:
-        # example: removing firefox (in favor of the flatpak)
-        # "firefox" is the main package, "firefox-langpacks" is a dependency
-        - firefox
-        - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
-
+  # 5. 默认 Flatpak 软件 (可选)
+  # 这些软件会在第一次开机后自动后台下载安装 (不占用构建时间)
   - type: default-flatpaks
-    configurations:
-      - notify: true # Send notification after install/uninstall is finished (true/false)
-        scope: system
-        # If no repo information is specified, Flathub will be used by default
-        install: # system flatpaks we want all users to have and not remove
-          - org.mozilla.firefox
-          - org.gnome.Loupe
-      - scope: user # Also add Flathub user repo, but no user packages
-
-  - type: signing # this sets up the proper policy & signing files for signed images to work fully
+    notify: true # 安装完通知我
+    system:
+      install:
+        # 浏览器
+        - org.mozilla.firefox
+        - com.google.Chrome
+        # 社交
+        - org.telegram.desktop
+        # 开发
+        # - com.visualstudio.code
+        - com.jianguoyun.Nutstore
