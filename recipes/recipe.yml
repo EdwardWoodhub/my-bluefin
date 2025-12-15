@@ -29,7 +29,6 @@ modules:
       enabled:
         - v2raya.service
         - vmtoolsd.service
-        - docker.service
 
   - type: files
     files:
