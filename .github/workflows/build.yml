@@ -34,11 +34,9 @@ jobs:
         uses: blue-build/github-action@v1.10
         with:
           recipe: ${{ matrix.recipe }}
+          cosign_private_key: ${{ secrets.SIGNING_SECRET }} # 这里的钥匙现在你有啦！
           registry_token: ${{ github.token }}
           pr_event_number: ${{ github.event.number }}
-          
-          # 关键修改：启用了禁用签名，并且删除了 cosign_private_key 那一行
-          disable_signing: true
 
           # enabled by default, disable if your image is small and you want faster builds
           maximize_build_space: true
