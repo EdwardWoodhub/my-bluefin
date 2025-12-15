@@ -6,7 +6,7 @@ image-version: latest
 modules:
   - type: script
     snippets:
-      - dnf -y copr enable mzz2017/v2raya
+      - dnf -y copr enable zhullyb/v2rayA
 
   - type: rpm-ostree
     install:
