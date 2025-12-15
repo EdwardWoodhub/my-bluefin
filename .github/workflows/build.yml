@@ -34,7 +34,7 @@ jobs:
         uses: blue-build/github-action@v1.10
         with:
           recipe: ${{ matrix.recipe }}
-          cosign_private_key: ${{ secrets.SIGNING_SECRET }}
+          # cosign_private_key: ${{ secrets.SIGNING_SECRET }}
           registry_token: ${{ github.token }}
           pr_event_number: ${{ github.event.number }}
           disable_signing: true  # <--- 加在这里！注意冒号后面有个空格
