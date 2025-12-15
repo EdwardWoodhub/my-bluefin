@@ -1,32 +1,30 @@
 name: my-bluefin-vm
-
 description: 专为 VMware 定制，集成 v2rayA 网络自治能力的 Bluefin 系统
-
-base-image: ghcr.io/ublue-os/bluefin:latest
-
+base-image: ghcr.io/ublue-os/bluefin
 image-version: latest
 
 modules:
-  - type: copr
-    name: mzz2017/v2raya
+  - type: script
+    name: enable-v2raya-copr
+    snippets:
+      - dnf -y copr enable mzz2017/v2raya
 
   - type: rpm-ostree
     install:
-      - v2ray-core          # V2Ray 核心
-      - v2raya              # Web 管理面板
-      - trojan              # Trojan 客户端 (如果你需要单独用 CLI)
+      - v2ray-core
+      - v2raya
+      - trojan
       - iptables
       - ipset
       - open-vm-tools
-      - open-vm-tools-desktop 
-      - git                 # 版本控制
-      - vim                 # 编辑器
-      - htop                # 进程查看
-      - fastfetch           # 查看系统信息 (类似 neofetch)
-      - wget                # 下载工具
-      - fuse                # 某些 AppImage 需要
-      - code              # 如果你想直接把 VSCode 装在系统层，取消注释
-      # - firefox
+      - open-vm-tools-desktop
+      - git
+      - vim
+      - htop
+      - fastfetch
+      - wget
+      - fuse
+      - code
       - flameshot
 
   - type: systemd
@@ -44,11 +42,10 @@ modules:
           net.ipv4.ip_forward = 1
 
   - type: default-flatpaks
-    notify: true # 安装完通知我
+    notify: true
     system:
       install:
         - org.mozilla.firefox
         - com.google.Chrome
         - org.telegram.desktop
-        # - com.visualstudio.code
         - com.jianguoyun.Nutstore
