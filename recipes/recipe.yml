@@ -9,12 +9,6 @@ base-image: ghcr.io/ublue-os/bluefin:latest
 # 如果你是 KDE 爱好者，请注释掉上面那行，取消下面这行的注释
 # base-image: ghcr.io/ublue-os/bazzite:latest
 
-# --- 显卡驱动选择 (默认 Intel/AMD) ---
-# 如果你的物理机是 Nvidia 显卡，且在 VMware 里开启了 3D 加速
-# 建议在这个 recipe 所在的 GitHub 仓库设置里，把 "drivers" 相关的选项打开
-# 或者查阅 BlueBuild 文档启用 Nvidia 基础镜像。
-# 但通常在 VMware 里，使用标准镜像即可，因为走的是虚拟显卡。
-
 image-version: latest
 
 # --- 核心模块配置 ---
