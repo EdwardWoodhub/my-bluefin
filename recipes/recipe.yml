@@ -1,7 +1,7 @@
 name: my-bluefin-vm
 description: 专为 VMware 定制，集成 v2rayA 网络自治能力的 Bluefin 系统
 base-image: ghcr.io/ublue-os/bluefin
-image-version: latest
+image-version: stable
 
 modules:
   - type: script
@@ -10,7 +10,6 @@ modules:
 
   - type: rpm-ostree
     install:
-      - v2ray-core
       - v2raya
       - trojan
       - iptables
@@ -23,7 +22,6 @@ modules:
       - fastfetch
       - wget
       - fuse
-      - code
       - flameshot
 
   - type: systemd
@@ -48,3 +46,4 @@ modules:
         - com.google.Chrome
         - org.telegram.desktop
         - com.jianguoyun.Nutstore
+        - com.visualstudio.code
