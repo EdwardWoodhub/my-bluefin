@@ -32,8 +32,7 @@ modules:
 
   - type: files
     files:
-      - source: system/99-ip-forward.conf
-        destination: /etc/sysctl.d/99-ip-forward.conf
+      - destination: /etc/sysctl.d/99-ip-forward.conf
         data: |
           net.ipv4.ip_forward = 1
 
