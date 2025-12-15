@@ -5,7 +5,6 @@ image-version: latest
 
 modules:
   - type: script
-    name: enable-v2raya-copr
     snippets:
       - dnf -y copr enable mzz2017/v2raya
 
