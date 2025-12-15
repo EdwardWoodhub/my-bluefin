@@ -6,8 +6,6 @@ description: 专为 VMware 定制，集成 v2rayA 网络自治能力的 Bluefin 
 # --- 基础镜像选择 ---
 # 如果你是 GNOME 爱好者 (推荐)，使用 Bluefin
 base-image: ghcr.io/ublue-os/bluefin:latest
-# 如果你是 KDE 爱好者，请注释掉上面那行，取消下面这行的注释
-# base-image: ghcr.io/ublue-os/bazzite:latest
 
 image-version: latest
 
