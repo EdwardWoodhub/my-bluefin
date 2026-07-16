@@ -76,7 +76,7 @@ jobs:
       # 2. 提前拉取你刚刚构建好的最新系统镜像到本地
       - name: Pull Custom Image to Local
         run: |
-          podman pull ghcr.io/edwardwoodhub/my-bluefin-vm:latest
+          sudo podman pull ghcr.io/edwardwoodhub/my-bluefin-vm:latest
 
       # 3. 使用 bootc-image-builder 将刚才打包好的 GHCR 镜像转换为 qcow2 格式
       - name: Build QCOW2
