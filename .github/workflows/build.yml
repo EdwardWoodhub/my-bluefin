@@ -79,7 +79,7 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
             --rootfs ext4 \
-            ghcr.io/${{ github.repository_owner }}/my-bluefin-vm:latest
+            ghcr.io/edwardwoodhub/my-bluefin-vm:latest
           # 💡 注意：请将上面最后一行的 "your-image-name" 替换为你在 recipe.yml 或 GitHub 中实际生成的容器镜像名称。
 
       # 4. 将生成的 qcow2 文件上传到 GitHub 运行结果的 Artifacts 中
