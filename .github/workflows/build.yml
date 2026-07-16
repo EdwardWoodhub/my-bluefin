@@ -75,7 +75,7 @@ jobs:
             --privileged \
             --security-opt label=disable \
             -v ./output:/output \
-            -v /var/lib/containers:/var/lib/containers \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
             --rootfs ext4 \
