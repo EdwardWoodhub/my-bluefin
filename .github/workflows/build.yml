@@ -106,15 +106,15 @@ jobs:
           if-no-files-found: error
 
       # 【新增：发布到 Release 环节】
-      - name: Release QCOW2 Image
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest-qcow2      # 固定的 Tag 名字，方便以后每次覆盖更新
-          name: "Latest Custom Bluefin QCOW2 Image"
-          body: "This is the latest compiled QCOW2 image of your custom Bluefin system."
+      #- name: Release QCOW2 Image
+        #uses: softprops/action-gh-release@v2
+        #with:
+          #tag_name: latest-qcow2      # 固定的 Tag 名字，方便以后每次覆盖更新
+          #name: "Latest Custom Bluefin QCOW2 Image"
+          #body: "This is the latest compiled QCOW2 image of your custom Bluefin system."
           # 指向你本地刚刚生成的裸 qcow2 文件路径
-          files: ./output/qcow2/disk.qcow2 
-          prerelease: false
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 必须配这个，Action 才有权帮你创建 Release
+          #files: ./output/qcow2/disk.qcow2 
+          #prerelease: false
+          #make_latest: true
+        #env:
+          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 必须配这个，Action 才有权帮你创建 Release
