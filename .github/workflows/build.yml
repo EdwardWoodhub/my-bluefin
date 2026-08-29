@@ -56,14 +56,18 @@ jobs:
       # 【新增步骤 2】：使用 Skopeo 零开销将镜像从 GHCR 直接同步到阿里云 ACR
       # =========================================================================
       - name: Sync OCI Image from GHCR to Aliyun ACR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         run: |
-          echo "Syncing image layers to Aliyun ACR..."
-          skopeo copy --all \
+          echo "Syncing latest image layers to Aliyun ACR in compatibility mode..."
+          skopeo copy \
             --src-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
             --dest-creds "${{ secrets.ALIYUN_ACR_USERNAME }}:${{ secrets.ALIYUN_ACR_PASSWORD }}" \
+            --dest-compress-format gzip \
+            --format v2s2 \
             docker://ghcr.io/edwardwoodhub/my-bluefin-vm:latest \
             docker://${{ secrets.ALIYUN_ACR_REGISTRY }}/edwardwoodhub/my-bluefin-vm:latest
+            
+      
             
 # ==========================================
   # Job 2：【新增】将上面构建好的容器镜像转换为 qcow2 镜像并作为 Artifacts 供下载
