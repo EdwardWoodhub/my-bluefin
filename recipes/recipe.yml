@@ -11,20 +11,26 @@ modules:
 
   - type: rpm-ostree
     install:
-      - v2raya
-      - trojan
-      - iptables
-      - ipset
-      - open-vm-tools
-      - open-vm-tools-desktop
-      - git
-      - vim
-      - htop
       - btop
       - fastfetch
-      - wget
       - fuse
       - flameshot
+      - git
+      - gedit
+      - htop
+      - iptables
+      - ipset
+      - kwrite
+      - open-vm-tools
+      - open-vm-tools-desktop
+      - pluma
+      - trojan
+      - v2raya
+      - vim
+      - wget
+      
+      
+      
 
   - type: systemd
     system:
