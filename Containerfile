@@ -30,19 +30,19 @@ RUN rpm-ostree install \
 # 3. 启用系统服务（对应 systemd 模块）
 RUN systemctl enable v2raya.service vmtoolsd.service
 
-# 4. 配置系统预装 Flatpak（对应 default-flatpaks@v1 模块）
-# 在基于 rpm-ostree 的系统中，通常通过向系统目录写入 Flatpak 预装列表文件来实现
-RUN mkdir -p /etc/flatpak/remotes.d /etc/flatpak/install.d \
-    && cat << 'EOF' > /etc/flatpak/install.d/custom-flatpaks.txt
-com.google.Chrome
-com.dropbox.Client
-com.visualstudio.code
-org.mozilla.firefox
-com.github.tchx84.Flatseal
-io.missioncenter.MissionCenter
-com.jianguoyun.Nutstore
-io.github.peazip.PeaZip
-net.nokyan.Resources
-org.telegram.desktop
-com.xnview.XnViewMP
-EOF
+# 4. 配置系统预装 Flatpak
+RUN mkdir -p /etc/flatpak/install.d \
+    && printf "%s\n" \
+       "com.google.Chrome" \
+       "com.dropbox.Client" \
+       "com.visualstudio.code" \
+       "org.mozilla.firefox" \
+       "com.github.tchx84.Flatseal" \
+       "io.missioncenter.MissionCenter" \
+       "com.jianguoyun.Nutstore" \
+       "io.github.peazip.PeaZip" \
+       "net.nokyan.Resources" \
+       "org.telegram.desktop" \
+       "com.xnview.XnViewMP" \
+       > /etc/flatpak/install.d/custom-flatpaks.txt
+
