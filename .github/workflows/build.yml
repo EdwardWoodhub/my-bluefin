@@ -83,7 +83,6 @@ jobs:
             --dest-compress-format gzip \
             --format v2s2 \
             --retry-times 5 \
-            --retry-delay 10s \
             docker://ghcr.io/${{ env.IMAGE_NAME }}:latest \
             docker://${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
