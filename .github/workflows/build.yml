@@ -1,88 +1,92 @@
-name: bluebuild
+name: Build and Push Custom Image
+
 on:
   schedule:
-    - cron:
-        "17 20 * * *" # build at 04:17 CST every day
-        # (20 minutes after last ublue images start building)
+    - cron: "17 20 * * *" # 每天定时触发
   push:
-    paths-ignore: # don't rebuild if only documentation has changed
+    branches:
+      - main
+    paths-ignore:
       - "**.md"
-
   pull_request:
-  workflow_dispatch: # allow manually triggering builds
+  workflow_dispatch:
+
 concurrency:
-  # only run one build at a time
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
+
+env:
+  IMAGE_NAME: edwardwoodhub/my-bluefin-vm
+
 jobs:
-  bluebuild:
-    name: Build Custom Image
+  build-and-push:
+    name: Build and Push Container Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       id-token: write
-    strategy:
-      fail-fast: false # stop GH from cancelling all matrix builds if one fails
-      matrix:
-        recipe:
-          # !! Add your recipes here
-          - recipe.yml
-    steps:
-      # the build is fully handled by the reusable github action
-      - name: Build Custom Image
-        uses: blue-build/github-action@v1.12
-        with:
-          recipe: ${{ matrix.recipe }}
-          cosign_private_key: ${{ secrets.SIGNING_SECRET }} # 这里的钥匙现在你有啦！
-          registry_token: ${{ github.token }}
-          pr_event_number: ${{ github.event.number }}
 
-          # enabled by default, disable if your image is small and you want faster builds
-          maximize_build_space: true
-          
-# =========================================================================
-      # 【新增步骤 1】：登录阿里云 ACR（仅在主分支 push 或手动触发时执行，避免 PR 浪费）
-      # =========================================================================
+    steps:
+      # 1. 释放磁盘空间（构建完整的 OS 基础镜像需要充足的空间）
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+
+      # 2. 检出代码
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # 3. 设置 Docker Buildx（多标签与多 Registry 支持）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. 登录 GHCR
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. 登录阿里云 ACR（仅在 PR 之外执行，防止 Secret 泄露）
       - name: Log in to Aliyun ACR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-        uses: redhat-actions/podman-login@v1
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ALIYUN_ACR_REGISTRY }}
           username: ${{ secrets.ALIYUN_ACR_USERNAME }}
           password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
 
-      # =========================================================================
-      # 【新增步骤 2】：使用 Skopeo 零开销将镜像从 GHCR 直接同步到阿里云 ACR
-      # =========================================================================
-      - name: Sync OCI Image from GHCR to Aliyun ACR
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-        run: |
-          echo "Syncing latest image layers to Aliyun ACR in compatibility mode..."
-          skopeo copy \
-            --src-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
-            --dest-creds "${{ secrets.ALIYUN_ACR_USERNAME }}:${{ secrets.ALIYUN_ACR_PASSWORD }}" \
-            --dest-compress-format gzip \
-            --format v2s2 \
-            docker://ghcr.io/edwardwoodhub/my-bluefin-vm:latest \
-            docker://${{ secrets.ALIYUN_ACR_REGISTRY }}/edwardwoodhub/my-bluefin-vm:latest
-            
-      
-            
-# ==========================================
-  # Job 2：【新增】将上面构建好的容器镜像转换为 qcow2 镜像并作为 Artifacts 供下载
+      # 6. 本地构建并直接推送到两个 Registry
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          # 仅在非 PR 阶段才真正执行 push
+          push: ${{ github.event_name != 'pull_request' }}
+          # 同时打上 GHCR 和 ACR 的目标 tag，Docker 会在本地构建一次后分别推送到两个仓库
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  # ==========================================
+  # Job 2：将构建好的镜像转换为 qcow2 镜像并作为 Artifacts 供下载
   # ==========================================
   build-disk:
     name: Build QCOW2 Disk Image
     runs-on: ubuntu-latest
-    needs: bluebuild # 必须要等 Job 1（容器构建）成功后才会执行此步骤
+    needs: build-and-push
     permissions:
-      contents: write  # 👈 这一行非常关键！没有它，Release 步骤会报 403 权限拒绝
-    # 仅在 main 默认分支上推送或手动触发时才生成磁盘镜像，避免 PR 时浪费 Actions 额度
+      contents: write
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
 
     steps:
-      # 1. 释放 GitHub Runner 的磁盘空间，防止编译虚拟机镜像时爆磁盘
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
@@ -91,11 +95,9 @@ jobs:
           dotnet: true
           haskell: true
 
-      # 2. 检出代码以读取必要信息
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # 1. 登录 GHCR 以获得拉取私有/公开自定义镜像的权限
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@v1
         with:
@@ -103,14 +105,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. 提前拉取你刚刚构建好的最新系统镜像到本地
       - name: Pull Custom Image to Local
         run: |
-          sudo podman pull ghcr.io/edwardwoodhub/my-bluefin-vm:latest
+          sudo podman pull ghcr.io/${{ env.IMAGE_NAME }}:latest
 
-      # 3. 使用 bootc-image-builder 将刚才打包好的 GHCR 镜像转换为 qcow2 格式
       - name: Build QCOW2
-        # 我们使用红帽官方推荐的 bootc 镜像构建工具（容器版运行）
         run: |
           mkdir -p ./output
           sudo podman run \
@@ -122,27 +121,11 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
             --rootfs ext4 \
-            ghcr.io/edwardwoodhub/my-bluefin-vm:latest
-          # 💡 注意：请将上面最后一行的 "your-image-name" 替换为你在 recipe.yml 或 GitHub 中实际生成的容器镜像名称。
+            ghcr.io/${{ env.IMAGE_NAME }}:latest
 
-      # 4. 将生成的 qcow2 文件上传到 GitHub 运行结果的 Artifacts 中
       - name: Upload QCOW2 as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: custom-bluefin-qcow2
           path: ./output/qcow2/disk.qcow2
           if-no-files-found: error
-
-      # 【新增：发布到 Release 环节】
-      #- name: Release QCOW2 Image
-        #uses: softprops/action-gh-release@v2
-        #with:
-          #tag_name: latest-qcow2      # 固定的 Tag 名字，方便以后每次覆盖更新
-          #name: "Latest Custom Bluefin QCOW2 Image"
-          #body: "This is the latest compiled QCOW2 image of your custom Bluefin system."
-          # 指向你本地刚刚生成的裸 qcow2 文件路径
-          #files: ./output/qcow2/disk.qcow2 
-          #prerelease: false
-          #make_latest: true
-        #env:
-          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 必须配这个，Action 才有权帮你创建 Release
