@@ -64,19 +64,24 @@ jobs:
             -t ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             -f Containerfile .
 
-      # 4. 依次推送镜像至两个 Registry（先推 GHCR，再推 ACR）
+      # 4. 依次推送镜像至两个 Registry
       - name: Push Images
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
         run: |
-          echo "Pushing to GHCR..."
+          echo "Pushing to GHCR via Podman..."
           sudo podman push ghcr.io/${{ env.IMAGE_NAME }}:latest
 
-          echo "Pushing to Aliyun ACR in compatibility mode..."
-          # 针对阿里云 ACR 强制转换为 docker v2s2 格式与 gzip 压缩，规避 OCI 格式不兼容报错
-          sudo podman push \
+          echo "Pushing to Aliyun ACR via Skopeo (with retry & compression)..."
+          # 直接读取本地 containers-storage 存根，无需再次下载
+          sudo skopeo copy \
+            --insecure-policy \
+            --retry-times 5 \
+            --dest-compress-format gzip \
             --format v2s2 \
-            --compress \
-            ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            containers-storage:ghcr.io/${{ env.IMAGE_NAME }}:latest \
+            docker://${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            
+      
 
   # ========================================================
   # Job 2：将构建好的镜像转换为 qcow2 镜像并作为 Artifacts 供下载
