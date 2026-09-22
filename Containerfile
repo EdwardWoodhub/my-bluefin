@@ -1,4 +1,4 @@
-FROM ghcr.io/ublue-os/bluefin:stable
+FROM  quay.io/fedora/fedora-silverblue:44
 
 # 1. 软件源与系统配置（对应 script 模块）
 RUN dnf -y copr enable zhullyb/v2rayA \
