@@ -71,16 +71,24 @@ jobs:
           echo "Pushing to GHCR via Podman..."
           sudo podman push ghcr.io/${{ env.IMAGE_NAME }}:latest
 
-          echo "Pushing to Aliyun ACR via Skopeo (with retry & compression)..."
-          # 直接读取本地 containers-storage 存根，无需再次下载
-          sudo skopeo copy \
+      # 推送到 GHCR 之后，直接进行 Registry 到 Registry 的同步
+      - name: Sync Image from GHCR to Aliyun ACR
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        run: |
+          echo "Syncing image from GHCR to Aliyun ACR..."
+          skopeo copy \
             --insecure-policy \
-            --retry-times 5 \
+            --src-creds "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            --dest-creds "${{ secrets.ALIYUN_ACR_USERNAME }}:${{ secrets.ALIYUN_ACR_PASSWORD }}" \
             --dest-compress-format gzip \
             --format v2s2 \
-            containers-storage:ghcr.io/${{ env.IMAGE_NAME }}:latest \
+            --retry-times 5 \
+            --retry-delay 10s \
+            docker://ghcr.io/${{ env.IMAGE_NAME }}:latest \
             docker://${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
+      
+         
       
 
   # ========================================================
