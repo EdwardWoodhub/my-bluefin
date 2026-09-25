@@ -1,4 +1,4 @@
-name: Build and Push Custom Image
+name: Build GNOME OS Based On Fedora Silverblue 44 Bootc Image 
 
 on:
   schedule:
