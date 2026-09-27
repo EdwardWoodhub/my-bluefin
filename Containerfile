@@ -34,8 +34,9 @@ RUN systemctl enable v2raya.service vmtoolsd.service
 RUN mkdir -p /etc/flatpak/install.d \
     && printf "%s\n" \
        "com.google.Chrome" \
-       "com.dropbox.Client" \
        "com.visualstudio.code" \
+       "com.dropbox.Client" \
+       "com.mattjakeman.ExtensionManager" \
        "org.mozilla.firefox" \
        "com.github.tchx84.Flatseal" \
        "io.missioncenter.MissionCenter" \
@@ -43,6 +44,7 @@ RUN mkdir -p /etc/flatpak/install.d \
        "io.github.peazip.PeaZip" \
        "net.nokyan.Resources" \
        "org.telegram.desktop" \
+       "io.github.flattool.Warehouse" \
        "com.xnview.XnViewMP" \
        > /etc/flatpak/install.d/custom-flatpaks.txt
 
