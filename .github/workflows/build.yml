@@ -26,7 +26,7 @@ jobs:
     name: Build and Push Container Images
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
 
@@ -64,6 +64,77 @@ jobs:
             -t ${{ secrets.ALIYUN_ACR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             -f Containerfile .
 
+      # ========================================================
+  # Job 3：使用 bootc-image-builder 构建 LiveISO 并发布到 GitHub Releases
+  # ========================================================
+  build-and-release-iso:
+    name: Build and Release Live ISO
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: write
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      # 1. 释放虚拟机磁盘空间，确保构建 ISO 空间充裕
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+
+      # 2. 检出代码
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # 3. 登录 GHCR
+      - name: Log in to GHCR
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. 拉取已构建好的容器镜像
+      - name: Pull Custom Image to Local
+        run: |
+          sudo podman pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+
+      # 5. 使用 bootc-image-builder 将镜像转换为 anaconda-iso (Live/Installer ISO)
+      - name: Build Live ISO
+        run: |
+          mkdir -p ./output
+          sudo podman run \
+            --rm \
+            --privileged \
+            --security-opt label=disable \
+            -v ./output:/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type anaconda-iso \
+            --rootfs ext4 \ 
+            ghcr.io/${{ env.IMAGE_NAME }}:latest
+
+          # 寻找生成的 ISO 并重命名为统一名称
+          ISO_PATH=$(find ./output -type f -name "*.iso" | head -n 1)
+          cp "$ISO_PATH" ./my-bluefin-live.iso
+
+      # 6. 切割大于 2GB 的 ISO 为 1.5GB 分卷文件
+      - name: Split ISO
+        run: |
+          split -b 1500M my-bluefin-live.iso my-bluefin-live.iso.part-
+
+      # 7. 生成 Release 标签并发布分卷 ISO 至 GitHub Releases
+      - name: Publish ISO to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: my-bluefin-live.iso.part-*
+          tag_name: live-iso-${{ github.run_number }}
+          name: "Live ISO Build ${{ github.run_number }}"
+          generate_release_notes: true
+      
       # 4. 依次推送镜像至两个 Registry
       - name: Push Images
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
