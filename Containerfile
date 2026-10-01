@@ -16,6 +16,7 @@ RUN rpm-ostree install \
     htop \
     ipset \
     iptables \
+    konsole \
     kwrite \
     meld \
     open-vm-tools \
