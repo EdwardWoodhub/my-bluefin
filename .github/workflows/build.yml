@@ -91,7 +91,7 @@ jobs:
 
       - name: Publish ISO to GitHub Releases
         uses: softprops/action-gh-release@v2
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'|| github.event_name == 'schedule'
         with:
           files: my-bluefin-live.iso.part-*
           tag_name: live-iso-${{ github.run_number }}
